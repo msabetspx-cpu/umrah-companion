@@ -254,9 +254,14 @@ function normalizeAr(s) {
         .toLowerCase().trim();
 }
 
+/* تقدّم الرحلة يُحفظ في sessionStorage: كل جلسة/زائر جديد يبدأ من البداية،
+ * ويبقى العدد محفوظاً عند إعادة تحميل الصفحة داخل نفس الجلسة. */
+const STATE_KEY = 'umrahState';
 function loadState() {
     try {
-        const saved = localStorage.getItem('umrahState');
+        // تنظيف أي تقدّم قديم كان محفوظاً بشكل دائم في localStorage (من إصدار سابق)
+        try { localStorage.removeItem(STATE_KEY); } catch (e) {}
+        const saved = sessionStorage.getItem(STATE_KEY);
         if (saved) {
             const p = JSON.parse(saved);
             state = Object.assign(clone(DEFAULT_STATE), p);
@@ -277,8 +282,16 @@ function loadState() {
     }
 }
 function saveState() {
-    try { localStorage.setItem('umrahState', JSON.stringify(state)); }
+    try { sessionStorage.setItem(STATE_KEY, JSON.stringify(state)); }
     catch (e) { console.warn('تعذّر الحفظ (قد تكون المساحة ممتلئة).', e); }
+}
+function resetJourney() {
+    state = clone(DEFAULT_STATE);
+    state.settings.crowd = document.body.classList.contains('crowd-mode'); // نبقي تفضيل العرض الحالي
+    saveState();
+    updateTawafUI(); updateSaiUI(); updateDashboard(); updateCompanion();
+    if (renderChecklistFn) renderChecklistFn();
+    ['trip-hotel','trip-room','trip-supervisor','trip-group','trip-flight','trip-notes'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 }
 function clampCount(n) { n = parseInt(n, 10); if (isNaN(n) || n < 0) return 0; return n > 7 ? 7 : n; }
 
@@ -357,6 +370,13 @@ function setupHeaderButtons() {
         state.settings.crowd = !state.settings.crowd;
         applyCrowd(state.settings.crowd);
         saveState();
+    });
+    const restart = document.getElementById('btn-restart');
+    if (restart) restart.addEventListener('click', () => {
+        if (confirm('هل تريد البدء من جديد؟ سيُصفَّر تقدّم الرحلة والعدّادات والقوائم.')) {
+            resetJourney();
+            showView('view-dashboard');
+        }
     });
 }
 
@@ -669,6 +689,7 @@ function renderTahallul() {
 /* =========================================================================
  * 12) Checklist (أقسام) — بناء آمن عبر DOM
  * ========================================================================= */
+let renderChecklistFn = null;
 function setupChecklist() {
     const sel = document.getElementById('new-check-section');
     sel.innerHTML = CHECK_SECTIONS.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
@@ -693,6 +714,7 @@ function setupChecklist() {
         });
         if (!state.checklist.length) container.innerHTML = emptyMsg('القائمة فارغة. أضف عناصرك.');
     };
+    renderChecklistFn = render;
     render();
 
     const addItem = () => {

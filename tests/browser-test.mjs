@@ -39,7 +39,7 @@ page.on('console', m => { if (m.type() === 'error') errors.push('console:' + m.t
 
 const txt = (sel) => page.locator(sel).textContent();
 const go = (id) => page.evaluate(i => { document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); document.getElementById(i).classList.add('active'); }, id);
-const setCounts = (t, s) => page.evaluate(([t,s]) => { const o=JSON.parse(localStorage.getItem('umrahState')||'{}'); o.completedTawaf=t; o.completedSai=s; localStorage.setItem('umrahState', JSON.stringify(o)); }, [t,s]);
+const setCounts = (t, s) => page.evaluate(([t,s]) => { const o=JSON.parse(sessionStorage.getItem('umrahState')||'{}'); o.completedTawaf=t; o.completedSai=s; sessionStorage.setItem('umrahState', JSON.stringify(o)); }, [t,s]);
 
 await page.goto(base + '/index.html', { waitUntil: 'networkidle' });
 await page.waitForTimeout(300);
@@ -69,7 +69,7 @@ for (let i=0;i<3;i++){ await page.click('#tawaf-plus'); await page.waitForTimeou
 ok('after 3 laps shows 4/7', (await txt('#tawaf-big')).trim() === '4 / 7');
 ok('3 dots done', await page.locator('#tawaf-dots .dot.done').count() === 3);
 for (let i=0;i<4;i++){ await page.click('#tawaf-plus'); await page.waitForTimeout(280); }
-const tw = await page.evaluate(()=>JSON.parse(localStorage.getItem('umrahState')).completedTawaf);
+const tw = await page.evaluate(()=>JSON.parse(sessionStorage.getItem('umrahState')).completedTawaf);
 ok('tawaf caps at 7', tw === 7);
 ok('auto-advanced to sai', await page.locator('#view-sai.active').count() === 1);
 
@@ -77,7 +77,7 @@ ok('auto-advanced to sai', await page.locator('#view-sai.active').count() === 1)
 await setCounts(0,0); await page.reload({ waitUntil:'networkidle' }); await page.click('.bottom-nav [data-target="view-tawaf"]');
 await page.locator('#tawaf-plus').click({ clickCount: 3, delay: 20 }).catch(()=>{});
 await page.waitForTimeout(300);
-ok('rapid taps increment at most 1', (await page.evaluate(()=>JSON.parse(localStorage.getItem('umrahState')).completedTawaf)) <= 1);
+ok('rapid taps increment at most 1', (await page.evaluate(()=>JSON.parse(sessionStorage.getItem('umrahState')).completedTawaf)) <= 1);
 
 // undo + reset(confirm) + no negative
 await setCounts(2,0); await page.reload({ waitUntil:'networkidle' }); await page.click('.bottom-nav [data-target="view-tawaf"]');
@@ -100,13 +100,13 @@ await setCounts(4,3); await page.reload({ waitUntil:'networkidle' }); await page
 ok('tawaf persists (5/7)', (await txt('#tawaf-big')).trim() === '5 / 7');
 
 // corrupt localStorage
-await page.evaluate(()=>localStorage.setItem('umrahState','{bad json'));
+await page.evaluate(()=>sessionStorage.setItem('umrahState','{bad json'));
 await page.reload({ waitUntil:'networkidle' }); await page.waitForTimeout(200);
 ok('survives corrupt localStorage', await page.locator('#view-dashboard').count()===1 && errors.filter(e=>e.includes('Uncaught')).length===0);
-ok('self-heals corrupt localStorage', await page.evaluate(()=>{ try { JSON.parse(localStorage.getItem('umrahState')); return true; } catch(e){ return false; } }));
+ok('self-heals corrupt localStorage', await page.evaluate(()=>{ try { JSON.parse(sessionStorage.getItem('umrahState')); return true; } catch(e){ return false; } }));
 
 // Context-aware "ماذا أفعل الآن": set stage TAWAF and check round text
-await page.evaluate(()=>{const o=JSON.parse(localStorage.getItem('umrahState')||'{}');o.stage='TAWAF';o.completedTawaf=3;localStorage.setItem('umrahState',JSON.stringify(o));});
+await page.evaluate(()=>{const o=JSON.parse(sessionStorage.getItem('umrahState')||'{}');o.stage='TAWAF';o.completedTawaf=3;sessionStorage.setItem('umrahState',JSON.stringify(o));});
 await page.reload({ waitUntil:'networkidle' });
 await page.click('#btn-what-now'); await page.waitForTimeout(200);
 const mw = await txt('#mw-body');
@@ -181,6 +181,26 @@ ok('no horizontal overflow at 375px', overflow === false);
 
 // SW registered
 ok('service worker registered', await page.evaluate(async()=>{ if(!('serviceWorker'in navigator))return false; return !!(await navigator.serviceWorker.getRegistration()); }));
+
+// NEW VISITOR / NEW SESSION starts fresh (session-scoped progress)
+// Advance progress in the current session, then open a brand-new context (a different visitor).
+await page.evaluate(()=>{ const o=JSON.parse(sessionStorage.getItem('umrahState')||'{}'); o.stage='SAI'; o.completedTawaf=7; o.completedSai=4; sessionStorage.setItem('umrahState', JSON.stringify(o)); });
+const ctx2 = await browser.newContext();
+const p2 = await ctx2.newPage();
+await p2.goto(base + '/index.html', { waitUntil:'networkidle' });
+await p2.waitForTimeout(200);
+ok('new visitor starts at البداية (الاستعداد)', (await p2.locator('#current-stage').textContent()).includes('الاستعداد'));
+ok('new visitor tawaf counter is fresh (1/7)', (await (async()=>{ await p2.evaluate(()=>{document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById('view-tawaf').classList.add('active');}); return (await p2.locator('#tawaf-big').textContent()).trim(); })()) === '1 / 7');
+// same-session reload keeps progress (real pilgrim mid-tawaf)
+await page.reload({ waitUntil:'networkidle' });
+await page.click('.bottom-nav [data-target="view-sai"]');
+ok('same session keeps progress after reload (sai 5/7)', (await txt('#sai-big')).trim() === '5 / 7');
+// restart button resets within session
+page.once('dialog', d => d.accept());
+await page.click('.bottom-nav [data-target="view-dashboard"]');
+await page.click('#btn-restart'); await page.waitForTimeout(150);
+ok('restart button resets to البداية', (await txt('#current-stage')).includes('الاستعداد'));
+await ctx2.close();
 
 // B. OFFLINE: kill server + go offline, reload from cache
 await page.waitForTimeout(600);
