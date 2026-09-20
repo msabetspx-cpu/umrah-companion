@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <!-- Allow zoom for accessibility (do not disable user-scalable) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>رفيق العمرة</title>
+    <meta name="description" content="رفيق شخصي يعمل دون إنترنت لإرشادك خطوة بخطوة أثناء أداء العمرة.">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%232e7d32'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="styles.css">
+    <meta name="theme-color" content="#2e7d32">
+</head>
+<body>
+    <noscript>
+        <p style="padding:20px;text-align:center">هذا التطبيق يحتاج إلى تفعيل JavaScript للعمل.</p>
+    </noscript>
+
+    <!-- Top Header -->
+    <header>
+        <div class="logo">رفيق العمرة</div>
+        <div class="controls">
+            <button id="btn-what-now" class="btn-warning" type="button">ماذا أفعل الآن؟</button>
+            <button id="btn-theme" type="button" aria-label="تبديل الوضع الليلي" title="الوضع الليلي">🌙</button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="app-content">
+        <!-- Dashboard -->
+        <section id="view-dashboard" class="view active" aria-label="الرئيسية">
+            <h2>أنا معك خطوة بخطوة</h2>
+            <p id="stage-hint" class="stage-hint" aria-live="polite"></p>
+            <div class="journey-status" role="group" aria-label="مراحل العمرة">
+                <button class="step-btn" data-target="view-companion" data-stage="PREPARATION" type="button">الاستعداد والإحرام</button>
+                <button class="step-btn" data-target="view-tawaf" data-stage="TAWAF" type="button">الطواف</button>
+                <button class="step-btn" data-target="view-sai" data-stage="SAI" type="button">السعي</button>
+                <button class="step-btn" data-target="view-tahallul" data-stage="HALQ_OR_TAQSIR" type="button">التحلل</button>
+            </div>
+
+            <div class="quick-links">
+                <button class="nav-btn" data-target="view-companion" type="button">رافقني في العمرة (خطوة بخطوة)</button>
+                <button class="nav-btn" data-target="view-adhkar" type="button">الأدعية والأذكار الثابتة</button>
+                <button class="nav-btn" data-target="view-forgot" type="button">نسيت ماذا أفعل؟</button>
+                <button class="nav-btn" data-target="view-checklist" type="button">قائمة التجهيزات</button>
+                <button class="nav-btn" data-target="view-ihram-rules" type="button">محظورات الإحرام</button>
+            </div>
+        </section>
+
+        <!-- Companion Mode -->
+        <section id="view-companion" class="view" aria-label="رافقني في العمرة">
+            <h2>رافقني في العمرة</h2>
+            <div id="companion-content" aria-live="polite"></div>
+            <div class="navigation-buttons">
+                <button id="comp-prev" class="btn-secondary" type="button">السابق</button>
+                <button id="comp-next" class="btn-primary" type="button">التالي</button>
+            </div>
+        </section>
+
+        <!-- Tawaf -->
+        <section id="view-tawaf" class="view" aria-label="عداد الطواف">
+            <h2>الطواف</h2>
+            <div class="counter-display">
+                <span class="label">أتممت</span>
+                <span id="tawaf-count" class="number" aria-live="polite">0</span>
+                <span class="label">من 7 أشواط</span>
+            </div>
+            <div class="counter-controls">
+                <button id="tawaf-minus" class="btn-icon" type="button" aria-label="تراجع عن آخر شوط">➖ تراجع</button>
+                <button id="tawaf-plus" class="btn-giant" type="button">أنهيت شوطاً ➕</button>
+            </div>
+            <div class="counter-secondary">
+                <button id="tawaf-doubt" class="btn-warning" type="button">شككت في العدد؟</button>
+                <button id="tawaf-reset" class="btn-ghost" type="button">إعادة العدّاد</button>
+            </div>
+
+            <div class="info-card mt-2">
+                <h3>ماذا أقول في الطواف؟</h3>
+                <ul>
+                    <li><strong>عند محاذاة الحجر الأسود:</strong> «الله أكبر» <button class="btn-speak" type="button" data-text="الله أكبر" aria-label="استماع">🔊</button></li>
+                    <li><strong>بين الركن اليماني والحجر الأسود:</strong> «رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ» <button class="btn-speak" type="button" data-text="رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ" aria-label="استماع">🔊</button></li>
+                </ul>
+                <p class="alert">⚠️ تنبيه: لا يوجد دعاء مخصوص لكل شوط. ادعُ بما شئت، واذكر الله، أو اقرأ القرآن.</p>
+            </div>
+        </section>
+
+        <!-- Sa'i -->
+        <section id="view-sai" class="view" aria-label="عداد السعي">
+            <h2>السعي</h2>
+            <div class="direction-indicator" id="sai-direction" aria-live="polite">الشوط 1: الصفا ➔ المروة</div>
+            <div class="counter-display">
+                <span class="label">أتممت</span>
+                <span id="sai-count" class="number" aria-live="polite">0</span>
+                <span class="label">من 7 أشواط</span>
+            </div>
+            <div class="counter-controls">
+                <button id="sai-minus" class="btn-icon" type="button" aria-label="تراجع عن آخر شوط">➖ تراجع</button>
+                <button id="sai-plus" class="btn-giant" type="button">وصلت ➕</button>
+            </div>
+            <div class="counter-secondary">
+                <button id="sai-reset" class="btn-ghost" type="button">إعادة العدّاد</button>
+            </div>
+
+            <div class="info-card mt-2">
+                <h3>عند الصفا والمروة</h3>
+                <p>استقبل القبلة، كبّر الله، وادعُ بهذا الدعاء (ورد أنه ﷺ كرّره)، وادعُ بينها بما شئت:</p>
+                <p class="arabic-text">«لا إله إلا الله وحده لا شريك له، له الملك وله الحمد وهو على كل شيء قدير، لا إله إلا الله وحده، أنجز وعده، ونصر عبده، وهزم الأحزاب وحده»</p>
+                <button class="btn-speak" type="button" data-text="لا إله إلا الله وحده لا شريك له، له الملك وله الحمد وهو على كل شيء قدير، لا إله إلا الله وحده، أنجز وعده، ونصر عبده، وهزم الأحزاب وحده">🔊 استماع</button>
+            </div>
+        </section>
+
+        <!-- Tahallul -->
+        <section id="view-tahallul" class="view" aria-label="التحلل">
+            <h2>التحلل من العمرة</h2>
+            <div class="info-card">
+                <h3>للرجل:</h3>
+                <p>الحلق (أفضل) أو التقصير لجميع شعر الرأس.</p>
+                <h3>للمرأة:</h3>
+                <p>تجمع شعرها وتقص من أطرافه قدر «أنملة» (عقدة الإصبع).</p>
+                <button id="btn-finish-umrah" class="btn-giant mt-2" type="button">تم التحلل ✅</button>
+            </div>
+        </section>
+
+        <!-- Ihram Rules -->
+        <section id="view-ihram-rules" class="view" aria-label="محظورات الإحرام">
+            <h2>محظورات الإحرام</h2>
+            <div id="ihram-rules-list"></div>
+        </section>
+
+        <!-- Adhkar Library -->
+        <section id="view-adhkar" class="view" aria-label="الأدعية والأذكار">
+            <h2>الأدعية والأذكار الثابتة</h2>
+            <label class="visually-hidden" for="search-adhkar">ابحث في الأذكار</label>
+            <input type="text" id="search-adhkar" placeholder="ابحث عن دعاء أو ذكر..." class="search-box" autocomplete="off">
+            <div id="adhkar-list" aria-live="polite"></div>
+        </section>
+
+        <!-- Forgot -->
+        <section id="view-forgot" class="view" aria-label="نسيت ماذا أفعل">
+            <h2>نسيت ماذا أفعل؟</h2>
+            <label class="visually-hidden" for="search-forgot">ابحث عن حالتك</label>
+            <input type="text" id="search-forgot" placeholder="ابحث عن حالتك (مثال: نسيت العدد)..." class="search-box" autocomplete="off">
+            <div id="forgot-list" aria-live="polite"></div>
+        </section>
+
+        <!-- Checklist -->
+        <section id="view-checklist" class="view" aria-label="قائمة التجهيزات">
+            <h2>قائمة التجهيزات</h2>
+            <div id="checklist-container"></div>
+            <div class="add-row">
+                <label class="visually-hidden" for="new-check-item">عنصر جديد</label>
+                <input type="text" id="new-check-item" placeholder="إضافة عنصر جديد..." autocomplete="off">
+                <button id="btn-add-check" class="btn-primary" type="button">إضافة</button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav" aria-label="التنقل السريع">
+        <button class="nav-btn" data-target="view-dashboard" type="button">الرئيسية</button>
+        <button class="nav-btn" data-target="view-tawaf" type="button">الطواف</button>
+        <button class="nav-btn" data-target="view-sai" type="button">السعي</button>
+        <button class="nav-btn" data-target="view-adhkar" type="button">الأذكار</button>
+    </nav>
+
+    <!-- Modal for "What to do now?" -->
+    <div id="modal-what-now" class="modal" role="dialog" aria-modal="true" aria-labelledby="mw-title" aria-hidden="true">
+        <div class="modal-content">
+            <button class="close-modal" type="button" aria-label="إغلاق">&times;</button>
+            <h2 id="mw-title">المرحلة الحالية</h2>
+            <p id="mw-do"><strong>افعل:</strong> <span></span></p>
+            <p id="mw-avoid"><strong>تجنب:</strong> <span></span></p>
+            <p id="mw-dhikr"><strong>الذكر:</strong> <span></span></p>
+            <p id="mw-source" class="source-text">المصدر: <span></span></p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
