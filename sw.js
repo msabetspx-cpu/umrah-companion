@@ -1,7 +1,7 @@
 'use strict';
 
 /* عامل الخدمة: يخزّن كل ملفات التطبيق ليعمل دون إنترنت بالكامل */
-const CACHE_NAME = 'umrah-companion-v2';
+const CACHE_NAME = 'umrah-companion-v3';
 const urlsToCache = [
   './',
   './index.html',
